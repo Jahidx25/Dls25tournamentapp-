@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLS25 Tournament - User Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-storage-compat.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .auth-box h1 {
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-size: 28px;
+        }
+
+        .auth-box p {
+            margin-bottom: 2rem;
+            color: #666;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .auth-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .auth-form {
+            display: block;
+        }
+
+        .auth-form.hidden {
+            display: none;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            margin: 15px 0;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .verification-step {
+            text-align: center;
+        }
+
+        .verification-step h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .code-input {
+            font-size: 24px;
+            text-align: center;
+            letter-spacing: 10px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .resend-timer {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .user-app {
+            display: none;
+            min-height: 100vh;
+            background: #f8f9fa;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .top-bar h2 {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            flex: 1;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-top: 3px solid transparent;
+        }
+
+        .nav-item.active {
+            color: #667eea;
+            border-top-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .nav-item .icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .nav-item .label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .main-content {
+            padding: 20px 20px 80px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Profile Section Styles - Dark Theme */
+        .profile-section {
+            background: #1a1a1a;
+            color: white;
+            min-height: calc(100vh - 140px);
+            padding: 20px;
+        }
+
+        .profile-header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            border: 4px solid #667eea;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .profile-pic:hover {
+            opacity: 0.8;
+        }
+
+        .profile-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .profile-team {
+            color: #ccc;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+
+        .win-chart {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .donut-chart {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+        }
+
+        /* Wallet Section Styles - Purple Theme */
+        .wallet-section {
+            background: linear-gradient(135deg, #8B5CF6, #A855F7);
+            color: white;
+            min-height: calc(100vh - 140px);
+            padding: 20px;
+        }
+
+        .wallet-header {
+            text-align: center;
+            padding: 30px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .wallet-balance {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .wallet-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .wallet-btn {
+            flex: 1;
+            padding: 15px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .wallet-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .transaction-history {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .slot-card {
+            border-left: 4px solid #667eea;
+        }
+
+        .slot-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .entry-fee {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .participants {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .btn-join {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .btn-join:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .match-card {
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .match-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .vs {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .match-code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .btn-submit-result {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-upload {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #f0f8ff;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 3000;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .discover-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .player-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .player-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .player-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+            object-fit: cover;
+        }
+
+        .player-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .player-stats {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .like-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-like,
+        .btn-dislike {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-like {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-dislike {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-like:hover {
+            background: #218838;
+        }
+
+        .btn-dislike:hover {
+            background: #c82333;
+        }
+
+        .points-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .points-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .points-table th,
+        .points-table td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .points-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .points-table tr:hover {
+            background: #f8f9ff;
+        }
+
+        @media (max-width: 768px) {
+            .wallet-actions {
+                flex-direction: column;
+            }
+            
+            .slot-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .match-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .points-table {
+                overflow-x: auto;
+            }
+            
+            .points-table table {
+                min-width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-box">
+            <h1>🏆 DLS25 Tournament</h1>
+            <p>Join the ultimate football tournament</p>
+            
+            <!-- Login/Signup Forms -->
+            <div id="authStep">
+                <div class="auth-tabs">
+                    <button id="loginTab" class="auth-tab active">Login</button>
+                    <button id="signupTab" class="auth-tab">Sign Up</button>
+                </div>
+                
+                <form id="loginForm" class="auth-form">
+                    <input type="email" id="loginEmail" class="form-input" placeholder="Your Gmail Address" required>
+                    <input type="password" id="loginPassword" class="form-input" placeholder="Password" required>
+                    <button type="submit" class="btn-primary">Login</button>
+                </form>
+                
+                <form id="signupForm" class="auth-form hidden">
+                    <input type="text" id="signupName" class="form-input" placeholder="Your Full Name" required>
+                    <input type="text" id="teamName" class="form-input" placeholder="Team Name" required>
+                    <input type="email" id="signupEmail" class="form-input" placeholder="Gmail Address" required>
+                    <input type="password" id="signupPassword" class="form-input" placeholder="Create Password" required>
+                    <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm Password" required>
+                    <button type="submit" class="btn-primary">Sign Up</button>
+                </form>
+            </div>
+            
+            <!-- Email Verification Step -->
+            <div id="verificationStep" class="verification-step hidden">
+                <h3>📧 Email Verification</h3>
+                <p>We've sent a 6-digit verification code to:</p>
+                <p><strong id="verificationEmail"></strong></p>
+                <input type="text" id="verificationCode" class="form-input code-input" placeholder="000000" maxlength="6">
+                <button id="verifyCodeBtn" class="btn-primary">Verify & Continue</button>
+                <button id="resendCodeBtn" class="btn-secondary">Resend Code</button>
+      
