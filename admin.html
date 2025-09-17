@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DLS25 Tournament - Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            color: #333;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-box h1 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            border-bottom-color: #4285f4;
+            color: #4285f4;
+            font-weight: 600;
+        }
+
+        .auth-form {
+            display: block;
+        }
+
+        .auth-form.hidden {
+            display: none;
+        }
+
+        .btn-google {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .btn-google:hover {
+            background: #357ae8;
+        }
+
+        .verification-input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .admin-panel {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: #2c3e50;
+            color: white;
+            z-index: 1000;
+        }
+
+        .sidebar h2 {
+            padding: 20px;
+            background: #34495e;
+            margin: 0;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #34495e;
+            transition: background 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #34495e;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            padding: 20px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .dispute-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .dispute-player {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .dispute-player img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .dispute-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-box">
+            <h1>🏆 DLS25 Admin</h1>
+            <p>Secure Admin Access</p>
+            
+            <!-- Login/Signup Form -->
+            <div id="authStep">
+                <div class="auth-tabs">
+                    <button id="loginTab" class="auth-tab active">Login</button>
+                    <button id="signupTab" class="auth-tab">Sign Up</button>
+                </div>
+                
+                <form id="loginForm" class="auth-form">
+                    <input type="email" id="loginEmail" class="verification-input" placeholder="Admin Email" required>
+                    <input type="password" id="loginPassword" class="verification-input" placeholder="Password" required>
+                    <button type="submit" class="btn-google">Login</button>
+                </form>
+                
+                <form id="signupForm" class="auth-form hidden">
+                    <input type="text" id="signupName" class="verification-input" placeholder="Full Name" required>
+                    <input type="email" id="signupEmail" class="verification-input" placeholder="Gmail Address" required>
+                    <input type="password" id="signupPassword" class="verification-input" placeholder="Password" required>
+                    <input type="password" id="confirmPassword" class="verification-input" placeholder="Confirm Password" required>
+                    <button type="submit" class="btn-google">Sign Up</button>
+                </form>
+            </div>
+            
+            <!-- Email Verification Step -->
+            <div id="verificationStep" class="hidden">
+                <h3>📧 Email Verification</h3>
+                <p>We've sent a 6-digit verification code to your Gmail.</p>
+                <p><strong id="verificationEmail"></strong></p>
+                <input type="text" id="verificationCode" class="verification-input" placeholder="Enter 6-digit code" maxlength="6">
+                <button id="verifyCodeBtn" class="btn-google">Verify & Access</button>
+                <button id="resendCodeBtn" class="btn-google" style="background: #6c757d;">Resend Code</button>
+                <div id="resendTimer" class="hidden" style="margin-top: 10px; color: #666;">
+                    Resend available in <span id="countdown">60</span> seconds
+                </div>
+            </div>
+            
+            <!-- Loading Screen -->
+            <div id="loadingStep" class="hidden">
+                <div class="loading" style="margin: 20px auto;"></div>
+                <p>Processing...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="admin-panel">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar">
+            <h2>🏆 DLS25 Admin</h2>
+            <div class="nav-item active" data-section="dashboard">📊 Dashboard</div>
+            <div class="nav-item" data-section="users">👥 Users</div>
+            <div class="nav-item" data-section="slots">🎮 Slots</div>
+            <div class="nav-item" data-section="wallet">💰 Wallet</div>
+            <div class="nav-item" data-section="matches">⚽ Matches</div>
+            <div class="nav-item" data-section="notifications">🔔 Notifications</div>
+            <div class="nav-item" data-section="logs">📝 Logs</div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div>
+                    <h1 id="pageTitle">Dashboard</h1>
+                    <p id="pageSubtitle">Overview of tournament statistics</p>
+                </div>
+                <div>
+                    <span id="adminName">Admin User</span>
+                    <button id="logoutBtn" class="btn btn-danger">Logout</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" class="section">
+                <div class="dashboard-cards">
+                    <div class="card">
+                        <h3>Total Users</h3>
+                        <div class="value" id="totalUsers">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Pending Withdrawals</h3>
+                        <div class="value" id="pendingWithdrawals">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Active Slots</h3>
+                        <div class="value" id="activeSlots">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Total Revenue</h3>
+                        <div class="value" id="totalRevenue">$0</div>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h3>Recent Activity</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Action</th>
+                                <th>User</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentActivity">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 40px;">Loading recent activity...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="usersSection" class="section hidden">
+                <div class="data-table">
+                    <div class="table-header">
+                        <input type="text" id="userSearch" class="search-input" placeholder="Search users...">
+                        <button class="btn btn-primary">Export Users</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Team</th>
+                                <th>Wallet</th>
+                                <th>Likes/Dislikes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px;"><div class="loading"></div> Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Slots Section -->
+            <div id="slotsSection" class="section hidden">
+                <div class="data-table">
+                    <div class="table-header">
+                        <input type="text" id="slotSearch" class="search-input" placeholder="Search slots...">
+                        <button id="createSlotBtn" class="btn btn-primary">+ Create New Slot</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Entry Fee</th>
+                                <th>Participants</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="slotsTable">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 40px;"><div class="loading"></div> Loading slots...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Wallet Section -->
+            <div id="walletSection" class="section hidden">
+                <div class="data-table">
+                    <div class="table-header">
+                        <input type="text" id="transactionSearch" class="search-input" placeholder="Search transactions...">
+                        <select id="transactionFilter">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTable">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px;"><div class="loading"></div> Loading transactions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Matches Section -->
+            <div id="matchesSection" class="section hidden">
+                <div class="data-table">
+                    <div class="table-header">
+                        <input type="text" id="matchSearch" class="search-input" placeholder="Search matches...">
+                        <select id="matchFilter">
+                            <option value="">All Matches</option>
+                            <option value="disputed">Disputed</option>
+                            <option value="verified">Verified</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Match ID</th>
+                                <th>Players</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="match
